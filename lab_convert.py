@@ -3,73 +3,60 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+
 def convert_image_rgb_to_lab(image_path, output_dir):
     img_bgr = cv2.imread(image_path)
     if img_bgr is None:
         print(f"Görüntü bulunamadı: {image_path}")
         return
 
+    # Orijinal RGB
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
+    # LAB Dönüşümü ve Kanalları Ayırma
     img_lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
     L, a, b = cv2.split(img_lab)
 
+    # Gradyan Büyüklüğü (Doku / Kenar Tespiti)
     sobelx = cv2.Sobel(L, cv2.CV_64F, 1, 0, ksize=3)
     sobely = cv2.Sobel(L, cv2.CV_64F, 0, 1, ksize=3)
+    gradient_magnitude = np.sqrt(sobelx ** 2 + sobely ** 2)
 
-    gradient_magnitude = np.sqrt(sobelx**2 + sobely**2)
-
-    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
-
-
-
-    axs[0, 0].imshow(img_rgb)
-    axs[0, 0].set_title('A: RGB clinical image', fontsize=10, loc='left')
-    axs[0, 0].axis('off')
-
-    im_a = axs[0, 1].imshow(a, cmap='coolwarm')
-    axs[0, 1].set_title('B: CIELAB a* red-green channel', fontsize=10, loc='left')
-    axs[0, 1].axis('off')
-    fig.colorbar(im_a, ax=axs[0, 1], fraction=0.046, pad=0.04)
-
-    im_l = axs[1, 0].imshow(L, cmap='gray')
-    axs[1, 0].set_title('C: L* luminance channel', fontsize=10, loc='left')
-    axs[1, 0].axis('off')
-    fig.colorbar(im_l, ax=axs[1, 0], fraction=0.046, pad=0.04)
-
-    im_g = axs[1, 1].imshow(gradient_magnitude, cmap='magma')
-    axs[1, 1].set_title('D: Gradient magnitude / boundary cue', fontsize=10, loc='left')
-    axs[1, 1].axis('off')
-    fig.colorbar(im_g, ax=axs[1, 1], fraction=0.046, pad=0.04)
-
-    plt.tight_layout()
-
+    # Çıktı klasörü yoksa oluştur
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    # Dosya ismini uzantısız olarak al (Örn: "aug_749_acne-cystic-118")
     base_name = os.path.basename(image_path)
-    file_name_without_ext = os.path.splitext(base_name)[0]
-    
+    file_name = os.path.splitext(base_name)[0]
 
-    save_path_img = os.path.join(output_dir, f"{file_name_without_ext}_analyzed.png")
-    plt.savefig(save_path_img, dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Görsel grafik başarıyla kaydedildi: {save_path_img}")
+    # 1. L Kanalını Kaydet (Gri Tonlama)
+    path_L = os.path.join(output_dir, f"{file_name}_L_channel.png")
+    plt.imsave(path_L, L, cmap='gray')
 
-    save_path_data = os.path.join(output_dir, f"{file_name_without_ext}_channels.npz")
-    np.savez_compressed(
-        save_path_data,
-        L_channel=L,
-        a_channel=a,
-        b_channel=b,
-        gradient_magnitude=gradient_magnitude
-    )
-    print(f"Sayısal kanal değerleri başarıyla kaydedildi: {save_path_data}")
+    # 2. a Kanalını Kaydet (Kızarıklık - Coolwarm Isı Haritası)
+    path_a = os.path.join(output_dir, f"{file_name}_a_channel.png")
+    plt.imsave(path_a, a, cmap='coolwarm')
+
+    # 3. b Kanalını Kaydet (Sarı/Mavi - Coolwarm Isı Haritası)
+    path_b = os.path.join(output_dir, f"{file_name}_b_channel.png")
+    plt.imsave(path_b, b, cmap='coolwarm')
+
+    # 4. Gradyan Büyüklüğünü Kaydet (Doku - Magma Isı Haritası)
+    path_grad = os.path.join(output_dir, f"{file_name}_gradient.png")
+    plt.imsave(path_grad, gradient_magnitude, cmap='magma')
+
+    # Opsiyonel: Orijinal RGB'yi de referans olarak kaydetmek isterseniz
+    path_rgb = os.path.join(output_dir, f"{file_name}_original.png")
+    plt.imsave(path_rgb, img_rgb)
+
+    print(f"[{file_name}] için tüm kanallar ayrı ayrı kaydedildi.")
+
 
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     input_image = os.path.join(BASE_DIR, "photos", "aug_749_acne-cystic-118.jpg")
     output_folder = os.path.join(BASE_DIR, "outputs")
-    
+
     convert_image_rgb_to_lab(input_image, output_folder)
