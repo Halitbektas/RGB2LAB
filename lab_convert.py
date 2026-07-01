@@ -6,7 +6,7 @@ import os
 def convert_image_rgb_to_lab(image_path, output_dir):
     img_bgr = cv2.imread(image_path)
     if img_bgr is None:
-        print("image not found")
+        print(f"Görüntü bulunamadı: {image_path}")
         return
 
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -21,7 +21,8 @@ def convert_image_rgb_to_lab(image_path, output_dir):
 
     fig, axs = plt.subplots(2, 2, figsize=(10, 8))
 
-    # Panel A: RGB Clinical Image
+
+
     axs[0, 0].imshow(img_rgb)
     axs[0, 0].set_title('A: RGB clinical image', fontsize=10, loc='left')
     axs[0, 0].axis('off')
@@ -48,18 +49,27 @@ def convert_image_rgb_to_lab(image_path, output_dir):
 
     base_name = os.path.basename(image_path)
     file_name_without_ext = os.path.splitext(base_name)[0]
-    save_path = os.path.join(output_dir, f"{file_name_without_ext}_analyzed.png")
+    
 
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    print(f"Görsel başarıyla kaydedildi: {save_path}")
-
+    save_path_img = os.path.join(output_dir, f"{file_name_without_ext}_analyzed.png")
+    plt.savefig(save_path_img, dpi=300, bbox_inches='tight')
     plt.close(fig)
+    print(f"Görsel grafik başarıyla kaydedildi: {save_path_img}")
 
+    save_path_data = os.path.join(output_dir, f"{file_name_without_ext}_channels.npz")
+    np.savez_compressed(
+        save_path_data,
+        L_channel=L,
+        a_channel=a,
+        b_channel=b,
+        gradient_magnitude=gradient_magnitude
+    )
+    print(f"Sayısal kanal değerleri başarıyla kaydedildi: {save_path_data}")
 
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     input_image = os.path.join(BASE_DIR, "photos", "aug_749_acne-cystic-118.jpg")
     output_folder = os.path.join(BASE_DIR, "outputs")
-
+    
     convert_image_rgb_to_lab(input_image, output_folder)
